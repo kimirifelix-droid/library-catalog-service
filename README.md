@@ -55,3 +55,8 @@ the lowercase slug is suitable for stable URLs.
 `seed.js` inserts four genres and sixteen books with checksum-valid ISBN-13
 numbers. It is safe to rerun against a disposable catalog database because it
 clears the existing book and genre documents before inserting them.
+
+The book seed data uses genre slugs only as lookup keys. `buildBooks` resolves
+each key to the inserted genre document's `ObjectId` before inserting books;
+an unknown slug stops the seed with an error instead of storing a string in
+the `genre` reference.
