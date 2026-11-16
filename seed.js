@@ -174,30 +174,42 @@ const books = [
   },
 ];
 
+function buildBooks(genreDocs) {
+  const genreIds = new Map(genreDocs.map((genre) => [genre.slug, genre._id]));
+
+  return books.map(({ genre, ...book }) => {
+    const genreId = genreIds.get(genre);
+
+    if (!genreId) {
+      throw new Error(`No inserted genre found for slug "${genre}".`);
+    }
+
+    return { ...book, genre: genreId };
+  });
+}
+
 async function seed() {
-  if (!process.env.MONGODB_URI) {
-    throw new Error('MONGODB_URI is not set. Add it to your .env file.');
-  }
-
-  await mongoose.connect(process.env.MONGODB_URI);
-
   try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI is not set. Add it to your .env file.');
+    }
+
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('Connected to MongoDB.');
+
     await Book.deleteMany({});
     await Genre.deleteMany({});
+    console.log('Cleared existing books and genres.');
 
-    const insertedGenres = await Genre.insertMany(genres);
-    const genreIds = new Map(
-      insertedGenres.map((genre) => [genre.slug, genre._id])
-    );
-    const booksWithGenreIds = books.map(({ genre, ...book }) => ({
-      ...book,
-      genre: genreIds.get(genre),
-    }));
+    const genreDocs = await Genre.insertMany(genres);
+    console.log(`Inserted ${genreDocs.length} genres.`);
 
-    await Book.insertMany(booksWithGenreIds);
-    console.log(`Seeded ${insertedGenres.length} genres and ${books.length} books.`);
+    const bookDocs = await Book.insertMany(buildBooks(genreDocs));
+    console.log(`Inserted ${bookDocs.length} books.`);
+    console.log(`Seeded ${genreDocs.length} genres and ${bookDocs.length} books.`);
   } finally {
     await mongoose.disconnect();
+    console.log('Disconnected from MongoDB.');
   }
 }
 
